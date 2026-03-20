@@ -10,6 +10,7 @@ import VendorLogin from "./components/vendor-login";
 import Dashboard from "./pages/dashboard";
 import Menu from "./pages/menu";
 import Orders from "./pages/orders";
+import Settings from "./pages/settings";
 import { Toaster } from "@/components/ui/sonner";
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/menu" element={<Menu />} />
             <Route path="/orders" element={<Orders />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
 

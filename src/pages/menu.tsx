@@ -335,9 +335,14 @@ export default function Menu() {
           <div className="flex shrink-0 items-center gap-2 p-1">
             <div className="max-w-xxl relative flex-1">
               <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input placeholder="Search dishes..." className="pl-10 transition-all focus-visible:ring-2" value={menuSearch} onChange={(e) => setMenuSearch(e.target.value)} />
+              <Input
+                placeholder="Search by name or ID..."
+                className="h-9 bg-white pl-10 shadow-sm transition-all focus-visible:ring-2"
+                value={menuSearch}
+                onChange={(e) => setMenuSearch(e.target.value)}
+              />
             </div>
-            <Button variant="outline" size="icon" onClick={() => fetchMenu(true)} disabled={loading} className="shrink-0">
+            <Button variant="outline" size="icon" className="text-muted-foreground h-9 w-9 bg-white" onClick={() => fetchMenu(true)} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
