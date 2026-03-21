@@ -23,10 +23,8 @@ export default function Menu() {
   const [loading, setLoading] = useState(true);
   const [menuSearch, setMenuSearch] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [editingField, setEditingField] = useState<{ id: number; field: string } | null>(null);
   const [tempValue, setTempValue] = useState<string>('');
-
   const [formData, setFormData] = useState({
     item_name: '',
     price: '',
@@ -36,28 +34,17 @@ export default function Menu() {
     image: null as File | null,
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-
   const stallId = localStorage.getItem('stallId');
 
-  // Generic API Helper
   const apiCall = useCallback(async (endpoint: string, options: RequestInit) => {
     const token = localStorage.getItem('vendorToken');
     if (!token) throw new Error('Authentication token not found.');
-
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
       ...((options.headers as Record<string, string>) || {}),
     };
-
-    if (!(options.body instanceof FormData)) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    const response = await fetch(`http://localhost:3000/api${endpoint}`, {
-      ...options,
-      headers,
-    });
-
+    if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+    const response = await fetch(`http://localhost:3000/api${endpoint}`, { ...options, headers });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'An error occurred');
     return data;
@@ -84,34 +71,24 @@ export default function Menu() {
     fetchMenu();
   }, [fetchMenu]);
 
-  // Editing Handlers
   const startEditing = (id: number, field: string, initialValue: any) => {
     setEditingField({ id, field });
     setTempValue(String(initialValue));
   };
 
   const handleBlur = async (id: number, field: string, originalValue: any) => {
-    // If editingField is null, it means we already saved via Enter/Escape
     if (!editingField) return;
-
     const newValue = tempValue;
     setEditingField(null);
-
     if (newValue !== String(originalValue)) {
       let finalValue: string | number = newValue;
-      if (field === 'price' || field === 'stock_qty') {
-        finalValue = Math.max(0, Number(newValue));
-      }
+      if (field === 'price' || field === 'stock_qty') finalValue = Math.max(0, Number(newValue));
       handleUpdate(id, { [field]: finalValue });
     }
   };
 
   const handleUpdate = async (id: number, updates: Partial<MenuItem>) => {
-    const promise = apiCall(`/updateItem/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    });
-
+    const promise = apiCall(`/updateItem/${id}`, { method: 'PATCH', body: JSON.stringify(updates) });
     toast.promise(promise, {
       loading: 'Updating...',
       success: (data) => {
@@ -132,7 +109,6 @@ export default function Menu() {
         const data = new FormData();
         data.append('image', file);
         const promise = apiCall(`/updateItem/${itemId}`, { method: 'PATCH', body: data });
-
         toast.promise(promise, {
           loading: 'Uploading new image...',
           success: (res) => {
@@ -152,15 +128,12 @@ export default function Menu() {
       toast.error('Price and Stock cannot be negative.');
       return;
     }
-
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       if (value !== null) data.append(key, value as any);
     });
     data.append('stall_id', String(stallId));
-
     const promise = apiCall('/addItem', { method: 'POST', body: data });
-
     toast.promise(promise, {
       loading: 'Adding menu item...',
       success: (res) => {
@@ -176,7 +149,6 @@ export default function Menu() {
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
     const promise = apiCall(`/deleteItem/${id}`, { method: 'DELETE' });
-
     toast.promise(promise, {
       loading: 'Deleting...',
       success: (data) => {
@@ -209,27 +181,33 @@ export default function Menu() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full flex-col space-y-6 overflow-hidden">
-      <header className="flex shrink-0 items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Menu Management</h1>
-        </div>
-      </header>
-
-      <div className="grid flex-1 gap-6 overflow-hidden lg:grid-cols-3">
-        {/* Left: Form Sidebar */}
-        <div className="flex shrink-0 flex-col overflow-y-auto pr-2">
-          <Card className="h-fit">
+    /*
+      On md and below: single column, form on top, grid below — both scroll naturally
+      On lg+:          3-col grid, form left (col-span-1), grid right (col-span-2),
+                       each side scrolls independently inside a fixed viewport height
+    */
+    <div className="p-4 md:p-6 lg:p-0">
+      {/* ── lg layout: side-by-side with independent scroll ── */}
+      <div className="flex flex-col gap-6 lg:h-[calc(100vh-66px)] lg:flex-row lg:overflow-hidden lg:p-8">
+        {/* Left: Add Item Form */}
+        <div className="w-full shrink-0 lg:w-72 lg:overflow-y-auto lg:pr-1 xl:w-80">
+          <Card className="h-fit shadow-sm" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#ffffff' }}>
             <CardHeader>
-              <CardTitle>Add Menu Item</CardTitle>
+              <CardTitle style={{ color: '#1a5c2a' }}>Add Menu Item</CardTitle>
               <CardDescription>Enter dish details and upload a photo.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               <form onSubmit={handleAddItem} className="space-y-4">
+                {/* Dish Photo */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Dish Photo</label>
+                  <label className="text-sm font-medium" style={{ color: '#14491f' }}>
+                    Dish Photo
+                  </label>
                   <div className="flex justify-center">
-                    <label className="relative flex aspect-square w-full max-w-[150px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-200 transition-colors hover:bg-slate-50">
+                    <label
+                      className="relative flex aspect-square w-full max-w-[150px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-colors hover:bg-slate-50"
+                      style={{ borderColor: '#c9a84c' }}
+                    >
                       <input type="file" ref={fileInputRef} className="sr-only" accept="image/*" onChange={handleFileChange} />
                       {imagePreview ? (
                         <div className="relative h-full w-full">
@@ -242,7 +220,7 @@ export default function Menu() {
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center p-4 text-center">
-                          <ImageIcon className="text-muted-foreground mb-2 h-8 w-8" />
+                          <ImageIcon className="mb-2 h-8 w-8" style={{ color: '#c9a84c' }} />
                           <p className="text-muted-foreground text-[10px]">Click to upload image</p>
                         </div>
                       )}
@@ -250,16 +228,22 @@ export default function Menu() {
                   </div>
                 </div>
 
+                {/* Dish Name */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Dish Name</label>
+                  <label className="text-sm font-medium" style={{ color: '#14491f' }}>
+                    Dish Name
+                  </label>
                   <div className="relative">
                     <Utensils className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
                     <Input className="pl-10" placeholder="Enter dish name..." value={formData.item_name} onChange={(e) => setFormData({ ...formData, item_name: e.target.value })} required />
                   </div>
                 </div>
 
+                {/* Description */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
+                  <label className="text-sm font-medium" style={{ color: '#14491f' }}>
+                    Description
+                  </label>
                   <div className="relative">
                     <AlignLeft className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
                     <Textarea
@@ -271,9 +255,12 @@ export default function Menu() {
                   </div>
                 </div>
 
+                {/* Price & Stock */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Price (₱)</label>
+                    <label className="text-sm font-medium" style={{ color: '#14491f' }}>
+                      Price (₱)
+                    </label>
                     <div className="relative">
                       <Banknote className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
                       <Input
@@ -289,7 +276,9 @@ export default function Menu() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Stock</label>
+                    <label className="text-sm font-medium" style={{ color: '#14491f' }}>
+                      Stock
+                    </label>
                     <div className="relative">
                       <Package className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
                       <Input
@@ -305,8 +294,11 @@ export default function Menu() {
                   </div>
                 </div>
 
-                <div className="space-y-">
-                  <label className="text-sm font-medium">Category</label>
+                {/* Category */}
+                <div className="space-y-1">
+                  <label className="text-sm font-medium" style={{ color: '#14491f' }}>
+                    Category
+                  </label>
                   <select
                     className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
                     value={formData.category}
@@ -319,7 +311,7 @@ export default function Menu() {
                   </select>
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full font-medium text-white transition-all hover:opacity-90" style={{ backgroundColor: '#1a5c2a' }}>
                   Save to Menu
                 </Button>
               </form>
@@ -328,56 +320,59 @@ export default function Menu() {
         </div>
 
         {/* Right: Menu Grid */}
-        <div className="flex flex-col space-y-4 overflow-hidden lg:col-span-2">
-          {/* Search and Refresh Row */}
-          <div className="flex shrink-0 items-center gap-2 p-1">
-            <div className="max-w-xxl relative flex-1">
+        <div className="flex flex-1 flex-col gap-4 lg:overflow-hidden">
+          {/* Search & Refresh */}
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="relative flex-1">
               <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
-                placeholder="Search by name or ID..."
-                className="h-9 bg-white pl-10 shadow-sm transition-all focus-visible:ring-2"
-                value={menuSearch}
-                onChange={(e) => setMenuSearch(e.target.value)}
-              />
+              <Input placeholder="Search by name or ID..." className="h-9 bg-white pl-10 shadow-sm" value={menuSearch} onChange={(e) => setMenuSearch(e.target.value)} />
             </div>
-            <Button variant="outline" size="icon" className="text-muted-foreground h-9 w-9 bg-white" onClick={() => fetchMenu(true)} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 bg-white" onClick={() => fetchMenu(true)} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} style={{ color: '#1a5c2a' }} />
             </Button>
           </div>
 
-          <div className="custom-scrollbar flex-1 overflow-y-auto pr-2">
+          {/* Items grid — scrolls independently on lg */}
+          <div className="overflow-y-auto pb-4 lg:flex-1">
             {loading ? (
               <div className="flex h-64 items-center justify-center">
                 <div className="flex flex-col items-center gap-2">
-                  <RefreshCw className="text-primary/50 h-8 w-8 animate-spin" />
-                  <p className="text-muted-foreground animate-pulse">Loading menu...</p>
+                  <RefreshCw className="h-8 w-8 animate-spin" style={{ color: '#1a5c2a' }} />
+                  <p className="animate-pulse text-sm" style={{ color: '#6b7280' }}>
+                    Loading menu...
+                  </p>
                 </div>
               </div>
             ) : filteredItems.length > 0 ? (
-              <div className="grid gap-4 pb-2 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredItems.map((item) => (
-                  <Card key={item.item_id} className={`relative flex flex-col gap-0 overflow-hidden p-0 transition-all hover:shadow-md ${!item.is_available && 'opacity-60'}`}>
-                    {/* 1. Image Section */}
-                    <div className="bg-muted group relative aspect-square w-full shrink-0 cursor-pointer overflow-hidden" onClick={() => handleImageClick(item.item_id)}>
+                  <Card
+                    key={item.item_id}
+                    className={`relative flex flex-col gap-0 overflow-hidden p-0 transition-all hover:shadow-md ${!item.is_available && 'opacity-60'}`}
+                    style={{ border: '1.5px solid #c9a84c', backgroundColor: '#ffffff' }}
+                  >
+                    {/* Image */}
+                    <div className="group relative aspect-square w-full shrink-0 cursor-pointer overflow-hidden" style={{ backgroundColor: '#f5f9f5' }} onClick={() => handleImageClick(item.item_id)}>
                       {item.item_image_url ? (
                         <img src={`http://localhost:3000${item.item_image_url}`} alt={item.item_name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">
-                          <Utensils className="text-muted-foreground h-10 w-10" />
+                          <Utensils className="h-10 w-10" style={{ color: '#b8d9be' }} />
                         </div>
                       )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button variant="secondary" size="sm" className="gap-2">
-                      <Upload className="h-4 w-4" /> Change Image
-                    </Button>
-                  </div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Button variant="secondary" size="sm" className="gap-2">
+                          <Upload className="h-4 w-4" /> Change Image
+                        </Button>
+                      </div>
                     </div>
 
-                    {/* 2. Header Section */}
+                    {/* Card Header */}
                     <CardHeader className="px-4 pt-3 pb-2">
                       <div className="mb-2 flex items-center justify-between">
                         <select
-                          className="bg-background hover:bg-muted cursor-pointer rounded border px-2 py-0.5 text-[12px] font-medium transition-colors outline-none"
+                          className="cursor-pointer rounded border px-2 py-0.5 text-[12px] font-medium outline-none"
+                          style={{ backgroundColor: '#f0f7f1', borderColor: '#b8d9be', color: '#14491f' }}
                           value={item.category}
                           onChange={(e) => handleUpdate(item.item_id, { category: e.target.value })}
                         >
@@ -386,16 +381,13 @@ export default function Menu() {
                           <option value="Snacks">Snacks</option>
                           <option value="Desserts">Desserts</option>
                         </select>
-
-                        {/* FIXED WIDTH PRICE CONTAINER to prevent layout jumping */}
-                        <div className="w-24 cursor-pointer text-right font-bold text-green-600" onClick={() => startEditing(item.item_id, 'price', item.price)}>
+                        <div className="w-24 cursor-pointer text-right font-bold" style={{ color: '#1a5c2a' }} onClick={() => startEditing(item.item_id, 'price', item.price)}>
                           {editingField?.id === item.item_id && editingField.field === 'price' ? (
                             <div className="flex items-center justify-end">
                               <span className="mr-0.5">₱</span>
                               <input
                                 autoFocus
                                 type="number"
-                                // select() ensures all text is highlighted on focus
                                 onFocus={(e) => e.target.select()}
                                 className="w-full [appearance:textfield] bg-transparent text-right outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                 value={tempValue}
@@ -412,7 +404,7 @@ export default function Menu() {
                         </div>
                       </div>
 
-                      <CardTitle className="hover:text-primary cursor-pointer truncate text-base" onClick={() => startEditing(item.item_id, 'item_name', item.item_name)}>
+                      <CardTitle className="cursor-pointer truncate text-base" style={{ color: '#14491f' }} onClick={() => startEditing(item.item_id, 'item_name', item.item_name)}>
                         {editingField?.id === item.item_id && editingField.field === 'item_name' ? (
                           <input
                             autoFocus
@@ -428,7 +420,8 @@ export default function Menu() {
                       </CardTitle>
 
                       <div
-                        className="text-muted-foreground hover:bg-muted/50 line-clamp-3 min-h-[3rem] cursor-pointer rounded p-1 text-xs"
+                        className="hover:bg-muted/50 line-clamp-3 min-h-[3rem] cursor-pointer rounded p-1 text-xs"
+                        style={{ color: '#6b7280' }}
                         onClick={() => startEditing(item.item_id, 'description', item.description)}
                       >
                         {editingField?.id === item.item_id && editingField.field === 'description' ? (
@@ -447,37 +440,52 @@ export default function Menu() {
                       </div>
                     </CardHeader>
 
-                    {/* 3. Content Section */}
-                    <CardContent className="space-y-4 px-4 pt-0 pb-5">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-0 overflow-hidden rounded-md border">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-10 w-12 shrink-0 rounded-none border-r"
-                            onClick={() => handleUpdate(item.item_id, { stock_qty: Math.max(0, item.stock_qty - 1) })}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <Input
-                            type="number"
-                            onFocus={(e) => e.target.select()}
-                            className="h-10 [appearance:textfield] rounded-none border-0 text-center text-sm focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            value={item.stock_qty}
-                            onChange={(e) => handleUpdate(item.item_id, { stock_qty: Math.max(0, parseInt(e.target.value) || 0) })}
-                          />
-                          <Button variant="ghost" size="icon" className="h-10 w-12 shrink-0 rounded-none border-l" onClick={() => handleUpdate(item.item_id, { stock_qty: item.stock_qty + 1 })}>
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
+                    {/* Card Content */}
+                    <CardContent className="space-y-4 px-4 pt-3 pb-5">
+                      <div className="flex items-center gap-0 overflow-hidden rounded-md border" style={{ borderColor: '#d4e8d4' }}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-12 shrink-0 rounded-none border-r"
+                          style={{ borderColor: '#d4e8d4' }}
+                          onClick={() => handleUpdate(item.item_id, { stock_qty: Math.max(0, item.stock_qty - 1) })}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <Input
+                          type="number"
+                          onFocus={(e) => e.target.select()}
+                          className="h-10 [appearance:textfield] rounded-none border-0 text-center text-sm focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          value={item.stock_qty}
+                          onChange={(e) => handleUpdate(item.item_id, { stock_qty: Math.max(0, parseInt(e.target.value) || 0) })}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-12 shrink-0 rounded-none border-l"
+                          style={{ borderColor: '#d4e8d4' }}
+                          onClick={() => handleUpdate(item.item_id, { stock_qty: item.stock_qty + 1 })}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex gap-2">
-                          <Button size="sm" variant={item.is_available ? 'default' : 'outline'} className="h-10 flex-1" onClick={() => handleUpdate(item.item_id, { is_available: true })}>
+                          <Button
+                            size="sm"
+                            className="h-10 flex-1 font-medium transition-all hover:opacity-90"
+                            style={item.is_available ? { backgroundColor: '#1a5c2a', color: '#fff' } : { backgroundColor: 'transparent', border: '1px solid #d1d5db', color: '#6b7280' }}
+                            onClick={() => handleUpdate(item.item_id, { is_available: true })}
+                          >
                             Available
                           </Button>
-                          <Button size="sm" variant={!item.is_available ? 'default' : 'outline'} className="h-10 flex-1" onClick={() => handleUpdate(item.item_id, { is_available: false })}>
+                          <Button
+                            size="sm"
+                            className="h-10 flex-1 font-medium transition-all"
+                            style={!item.is_available ? { backgroundColor: '#1a5c2a', color: '#fff' } : { backgroundColor: 'transparent', border: '1px solid #d1d5db', color: '#6b7280' }}
+                            onClick={() => handleUpdate(item.item_id, { is_available: false })}
+                          >
                             Unavailable
                           </Button>
                         </div>
@@ -490,7 +498,9 @@ export default function Menu() {
                 ))}
               </div>
             ) : (
-              <div className="text-muted-foreground flex h-64 items-center justify-center">No items found.</div>
+              <div className="flex h-64 items-center justify-center text-sm" style={{ color: '#9ca3af' }}>
+                No items found.
+              </div>
             )}
           </div>
         </div>

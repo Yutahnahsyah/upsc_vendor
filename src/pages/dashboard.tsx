@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShoppingBag, Clock, CheckCircle, UtensilsCrossed, History } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, UtensilsCrossed, History, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ActivityLog {
@@ -48,21 +48,15 @@ export default function VendorDashboard() {
 
   useEffect(() => {
     fetchVendorStats();
-
-    // Listen for global refresh from VendorLayout or other components
     const handleRefresh = () => fetchVendorStats();
     window.addEventListener('refresh-orders', handleRefresh);
     return () => window.removeEventListener('refresh-orders', handleRefresh);
   }, [fetchVendorStats]);
 
   return (
-    <>
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Stall Overview</h1>
-      </header>
-
-      {/* Metric Cards */}
-      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="p-4 md:p-6 lg:p-8">
+      {/* ── Stat Cards: 1 col → 2 col → 4 col ── */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Sales Today"
           value={
@@ -73,44 +67,43 @@ export default function VendorDashboard() {
                   maximumFractionDigits: 2,
                 })}`
           }
-          icon={<ShoppingBag className="text-blue-500" />}
-        />{' '}
-        <StatCard title="Pending Orders" value={loading ? '...' : stats.pendingOrders.toString()} icon={<Clock className="text-orange-500" />} />
-        <StatCard title="Completed Orders Today" value={loading ? '...' : stats.completedOrders.toString()} icon={<CheckCircle className="text-green-500" />} />
-        <StatCard title="Available Menu Items" value={loading ? '...' : stats.activeItems.toString()} icon={<UtensilsCrossed className="text-gray-500" />} />
+          icon={<ShoppingBag className="h-5 w-5" style={{ color: '#1a5c2a' }} />}
+        />
+        <StatCard title="Pending Orders" value={loading ? '...' : stats.pendingOrders.toString()} icon={<Clock className="h-5 w-5 text-orange-500" />} />
+        <StatCard title="Completed Orders Today" value={loading ? '...' : stats.completedOrders.toString()} icon={<CheckCircle className="h-5 w-5" style={{ color: '#1a5c2a' }} />} />
+        <StatCard title="Available Menu Items" value={loading ? '...' : stats.activeItems.toString()} icon={<UtensilsCrossed className="h-5 w-5" style={{ color: '#c9a84c' }} />} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-7">
-        {/* RECENT ACTIVITY LOG */}
-        <Card className="col-span-4 flex flex-col border-2 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">Recent Activity</CardTitle>
-            </div>
+      {/* ── Bottom Cards: stack on md, side-by-side on lg ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+        {/* RECENT ACTIVITY */}
+        <Card className="col-span-1 flex flex-col shadow-sm lg:col-span-4" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#ffffff' }}>
+          <CardHeader>
+            <CardTitle style={{ color: '#1a5c2a' }}>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent className="max-h-[325px] flex-1 overflow-y-auto p-0">
             {loading ? (
-              <div className="flex h-[325px] items-center justify-center">Loading activity...</div>
+              <div className="flex h-[200px] items-center justify-center gap-2 text-sm" style={{ color: '#6b7280' }}>
+                <RefreshCw className="h-4 w-4 animate-spin" style={{ color: '#1a5c2a' }} />
+                Loading activity...
+              </div>
             ) : stats.recentActivity && stats.recentActivity.length > 0 ? (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y" style={{ borderColor: '#e8f0e9' }}>
                 {stats.recentActivity.map((log, i) => (
-                  <div key={`${log.id}-${i}`} className="flex items-start gap-4 p-4 hover:bg-slate-50/50">
+                  <div key={`${log.id}-${i}`} className="flex items-start gap-4 p-4">
                     <div className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${log.type === 'new_order' ? 'animate-pulse bg-orange-500' : 'bg-blue-500'}`} />
                     <div className="flex-1 space-y-1">
                       <p className="text-sm font-semibold">{log.message}</p>
                       <div className="text-muted-foreground flex items-center gap-2 text-xs">
                         <Clock className="h-3 w-3" />
-                        {new Date(log.created_at).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-muted-foreground flex h-[350px] flex-col items-center justify-center gap-2 italic">
+              <div className="flex h-[200px] flex-col items-center justify-center gap-2 text-sm italic" style={{ color: '#9ca3af' }}>
                 <History className="h-8 w-8 opacity-20" />
                 <p>No recent activity recorded.</p>
               </div>
@@ -119,51 +112,59 @@ export default function VendorDashboard() {
         </Card>
 
         {/* TOP SELLING ITEMS */}
-        <Card className="col-span-3 flex flex-col border-2 shadow-sm">
+        <Card className="col-span-1 flex flex-col shadow-sm lg:col-span-3" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#ffffff' }}>
           <CardHeader>
-            <CardTitle>Top Selling Items</CardTitle>
+            <CardTitle style={{ color: '#1a5c2a' }}>Top Selling Items</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             {loading ? (
-              <div className="flex h-[325px] items-center justify-center">Loading stats...</div>
+              <div className="flex h-[200px] items-center justify-center gap-2 text-sm" style={{ color: '#6b7280' }}>
+                <RefreshCw className="h-4 w-4 animate-spin" style={{ color: '#1a5c2a' }} />
+                Loading stats...
+              </div>
             ) : stats.topSellingItems && stats.topSellingItems.length > 0 ? (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {stats.topSellingItems.map((item, index) => {
                   const maxQty = stats.topSellingItems[0].total_qty;
                   const percentage = (item.total_qty / maxQty) * 100;
-
                   return (
                     <div key={index} className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-semibold">{item.item_name}</span>
                         <span className="text-muted-foreground font-medium">{item.total_qty} units</span>
                       </div>
-                      <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
-                        <div className="h-full rounded-full bg-green-500 transition-all duration-500" style={{ width: `${percentage}%` }} />
+                      <div className="h-3 w-full overflow-hidden rounded-full" style={{ backgroundColor: '#e8f0e9' }}>
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${percentage}%`, backgroundColor: '#1a5c2a' }} />
                       </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="text-muted-foreground flex h-[300px] items-center justify-center rounded-md border-2 border-dashed text-sm">No sales recorded yet.</div>
+              <div className="flex h-[200px] items-center justify-center rounded-md border-2 border-dashed text-sm" style={{ borderColor: '#b8d9be', color: '#9ca3af', backgroundColor: '#f5fbf6' }}>
+                No sales recorded yet.
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }
 
 function StatCard({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {
   return (
-    <Card className="shadow-sm">
+    <Card className="shadow-sm transition-shadow hover:shadow-md" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#ffffff' }}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium" style={{ color: '#14491f' }}>
+          {title}
+        </CardTitle>
         {icon}
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+      <CardContent className="pt-3">
+        <div className="text-2xl font-bold" style={{ color: '#1a5c2a' }}>
+          {value}
+        </div>
       </CardContent>
     </Card>
   );

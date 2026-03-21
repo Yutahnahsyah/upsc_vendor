@@ -37,18 +37,12 @@ export default function Orders() {
   const apiCall = useCallback(async (endpoint: string, options: RequestInit) => {
     const token = localStorage.getItem('vendorToken');
     if (!token) throw new Error('Authentication token not found.');
-
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
       ...((options.headers as Record<string, string>) || {}),
     };
-
-    const response = await fetch(`http://localhost:3000/api${endpoint}`, {
-      ...options,
-      headers,
-    });
-
+    const response = await fetch(`http://localhost:3000/api${endpoint}`, { ...options, headers });
     const data = await response.json();
     if (!response.ok) {
       const error = new Error(data.message || 'An error occurred') as any;
@@ -77,17 +71,9 @@ export default function Orders() {
 
   useEffect(() => {
     fetchOrders();
-
-    // Listen for the global refresh event from VendorLayout
-    const handleGlobalRefresh = () => {
-      fetchOrders();
-    };
-
+    const handleGlobalRefresh = () => fetchOrders();
     window.addEventListener('refresh-orders', handleGlobalRefresh);
-
-    return () => {
-      window.removeEventListener('refresh-orders', handleGlobalRefresh);
-    };
+    return () => window.removeEventListener('refresh-orders', handleGlobalRefresh);
   }, [fetchOrders]);
 
   const updateStatus = async (orderId: number, status: string) => {
@@ -95,7 +81,6 @@ export default function Orders() {
       method: 'PATCH',
       body: JSON.stringify({ orderId, status }),
     });
-
     toast.promise(promise, {
       loading: `Transitioning to ${status}...`,
       success: (res) => {
@@ -116,17 +101,13 @@ export default function Orders() {
         return res.message || `Order #${orderId} updated to ${status}`;
       },
       error: (err) => {
-        if (err.missing && err.missing.length > 0) {
-          return `Insufficient stock: ${err.missing.join(', ')}`;
-        }
+        if (err.missing && err.missing.length > 0) return `Insufficient stock: ${err.missing.join(', ')}`;
         return err.message || 'Failed to update order status.';
       },
     });
   };
 
-  const calculateTotal = (items: OrderItem[]) => {
-    return items.reduce((sum, item) => sum + Number(item.price_at_order) * item.quantity, 0);
-  };
+  const calculateTotal = (items: OrderItem[]) => items.reduce((sum, item) => sum + Number(item.price_at_order) * item.quantity, 0);
 
   const filteredOrders = useMemo(
     () => orders.filter((order) => [order.full_name, String(order.order_id), order.department].some((field) => field?.toLowerCase().includes(orderSearch.toLowerCase()))),
@@ -145,75 +126,98 @@ export default function Orders() {
       cancelled: 'bg-red-100 text-red-700 border-red-200',
     };
     return (
-      <Badge variant="outline" className={variants[status]}>
+      <Badge variant="outline" className={`text-[10px] font-bold uppercase ${variants[status]}`}>
         {status.toUpperCase()}
       </Badge>
     );
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full flex-col space-y-6 overflow-hidden">
-      <header className="flex shrink-0 items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Order Management</h1>
-        </div>
-      </header>
-
+    <div className="flex h-[calc(100vh-66px)] flex-col p-4 md:p-6 lg:p-8">
       <Tabs defaultValue="active" className="flex flex-1 flex-col overflow-hidden">
-        <TabsList className="mb-4 flex h-auto w-full justify-between bg-transparent p-0">
-          <div className="bg-muted flex rounded-lg p-0.5">
-            <TabsTrigger value="active">Active ({activeOrders.length})</TabsTrigger>
-            <TabsTrigger value="history">History ({completedOrders.length})</TabsTrigger>
+        {/* ── Tab Bar ── */}
+        <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-between gap-2 bg-transparent p-0">
+          {/* Tab toggles */}
+          <div className="flex rounded-lg p-0.5" style={{ backgroundColor: '#e8f0e9' }}>
+            <TabsTrigger
+              value="active"
+              className="rounded-md px-3 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:shadow-sm"
+              style={{ color: '#1a5c2a' }}
+            >
+              Active ({activeOrders.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="history"
+              className="rounded-md px-3 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:shadow-sm"
+              style={{ color: '#1a5c2a' }}
+            >
+              History ({completedOrders.length})
+            </TabsTrigger>
           </div>
 
-          <div className="mt-2 flex items-center gap-2 p-1">
-            <div className="relative w-64 lg:w-96">
+          {/* Search + Refresh */}
+          <div className="flex items-center gap-2">
+            <div className="relative w-48 sm:w-64 lg:w-80">
               <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input
-                placeholder="Search by name or ID..."
-                className="h-9 bg-white pl-10 shadow-sm transition-all focus-visible:ring-2"
-                value={orderSearch}
-                onChange={(e) => setOrderSearch(e.target.value)}
-              />
+              <Input placeholder="Search by name or ID..." className="h-9 bg-white pl-10 shadow-sm" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} />
             </div>
-            <Button variant="outline" size="icon" className="h-9 w-9 bg-white shadow-sm" onClick={() => fetchOrders(true)} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 bg-white shadow-sm" onClick={() => fetchOrders(true)} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} style={{ color: '#1a5c2a' }} />
             </Button>
           </div>
         </TabsList>
 
-        <TabsContent value="active" className="custom-scrollbar flex-1 overflow-y-auto">
-          <div className="grid gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">
-            {activeOrders.length === 0 ? (
-              <div className="text-muted-foreground col-span-full py-20 text-center">No active orders found.</div>
+        {/* ── Active Orders ── */}
+        <TabsContent value="active" className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">
+            {/* ── Loading state (matches Menu page) ── */}
+            {loading ? (
+              <div className="col-span-full flex h-64 items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <RefreshCw className="h-8 w-8 animate-spin" style={{ color: '#1a5c2a' }} />
+                  <p className="animate-pulse text-sm" style={{ color: '#6b7280' }}>
+                    Loading orders...
+                  </p>
+                </div>
+              </div>
+            ) : activeOrders.length === 0 ? (
+              <div className="col-span-full py-20 text-center text-sm" style={{ color: '#9ca3af' }}>
+                No active orders found.
+              </div>
             ) : (
               activeOrders.map((order) => (
-                <Card key={order.order_id} className="flex flex-col border-2 transition-all hover:shadow-md">
-                  <CardHeader className="pb-3">
+                <Card key={order.order_id} className="flex flex-col transition-all hover:shadow-md" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#ffffff' }}>
+                  <CardHeader>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <Hash className="text-muted-foreground h-3 w-3" />
-                        <span className="font-mono text-xs font-bold">{order.order_id}</span>
+                        <Hash className="h-3 w-3" style={{ color: '#c9a84c' }} />
+                        <span className="font-mono text-xs font-bold" style={{ color: '#1a5c2a' }}>
+                          {order.order_id}
+                        </span>
                         {getStatusBadge(order.status)}
                       </div>
                       <div className="flex items-center justify-between gap-4">
-                        <CardTitle className="truncate text-lg">{order.full_name}</CardTitle>
-                        <span className="text-muted-foreground text-s shrink-0 font-semibold tracking-widest uppercase">{order.department}</span>
+                        <CardTitle className="truncate text-lg" style={{ color: '#14491f' }}>
+                          {order.full_name}
+                        </CardTitle>
+                        <span className="shrink-0 text-xs font-semibold tracking-widest uppercase" style={{ color: '#6b7280' }}>
+                          {order.department}
+                        </span>
                       </div>
                     </div>
                   </CardHeader>
 
                   <CardContent className="flex-1 space-y-4">
-                    <div className="bg-muted/40 space-y-2 rounded-lg border border-dashed p-3">
+                    <div className="space-y-2 rounded-lg border border-dashed p-3" style={{ backgroundColor: '#f5fbf6', borderColor: '#b8d9be' }}>
                       {order.items.map((item, i) => (
                         <div key={i} className="flex justify-between text-sm">
                           <span>
                             <span className="font-bold">{item.quantity}x</span> {item.item_name_snapshot}
                           </span>
-                          <span className="text-muted-foreground">₱{item.price_at_order}</span>
+                          <span style={{ color: '#6b7280' }}>₱{item.price_at_order}</span>
                         </div>
                       ))}
-                      <div className="border-muted-foreground/30 text-primary mt-2 flex justify-between border-t border-dashed pt-2 font-bold">
+                      <div className="mt-2 flex justify-between border-t border-dashed pt-2 font-bold" style={{ borderColor: '#b8d9be', color: '#1a5c2a' }}>
                         <span className="flex items-center gap-1">
                           <ReceiptText className="h-4 w-4" /> Total Price
                         </span>
@@ -227,15 +231,15 @@ export default function Orders() {
                     )}
                   </CardContent>
 
-                  <CardContent className="flex flex-col gap-2 pt-0">
+                  <CardContent className="flex flex-col gap-2 pt-0 pb-4">
                     <div className="grid grid-cols-2 gap-2">
                       {order.status === 'pending' && (
-                        <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => updateStatus(order.order_id, 'preparing')}>
+                        <Button className="w-full bg-blue-600 text-white hover:bg-blue-700" onClick={() => updateStatus(order.order_id, 'preparing')}>
                           <Clock className="mr-2 h-4 w-4" /> Prepare
                         </Button>
                       )}
                       {order.status === 'preparing' && (
-                        <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => updateStatus(order.order_id, 'ready')}>
+                        <Button className="w-full text-white hover:opacity-90" style={{ backgroundColor: '#1a5c2a' }} onClick={() => updateStatus(order.order_id, 'ready')}>
                           <PackageCheck className="mr-2 h-4 w-4" /> Ready
                         </Button>
                       )}
@@ -257,60 +261,83 @@ export default function Orders() {
           </div>
         </TabsContent>
 
-        <TabsContent value="history" className="custom-scrollbar flex-1 overflow-y-auto">
-          <div className="grid gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">
-            {completedOrders.map((order) => (
-              <Card key={order.order_id} className="bg-muted/10 flex flex-col border-2 opacity-100 grayscale-[0.3]">
-                <CardHeader className="pb-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Hash className="text-muted-foreground h-3 w-3" />
-                      <span className="font-mono text-xs font-bold">{order.order_id}</span>
-                      {getStatusBadge(order.status)}
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <CardTitle className="truncate text-lg">{order.full_name}</CardTitle>
-                      <span className="text-muted-foreground text-s shrink-0 font-medium tracking-wider uppercase">{order.department}</span>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="flex-1 space-y-4">
-                  <div className="bg-background/50 space-y-2 rounded-lg border border-dashed p-3">
-                    {order.items.map((item, i) => (
-                      <div key={i} className="flex justify-between text-sm">
-                        <span>
-                          <span className="font-bold">{item.quantity}x</span> {item.item_name_snapshot}
+        {/* ── History ── */}
+        <TabsContent value="history" className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">
+            {/* ── Loading state (matches Menu page) ── */}
+            {loading ? (
+              <div className="col-span-full flex h-64 items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <RefreshCw className="h-8 w-8 animate-spin" style={{ color: '#1a5c2a' }} />
+                  <p className="animate-pulse text-sm" style={{ color: '#6b7280' }}>
+                    Loading history...
+                  </p>
+                </div>
+              </div>
+            ) : completedOrders.length === 0 ? (
+              <div className="col-span-full py-20 text-center text-sm" style={{ color: '#9ca3af' }}>
+                No order history yet.
+              </div>
+            ) : (
+              completedOrders.map((order) => (
+                <Card key={order.order_id} className="flex flex-col opacity-90" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#fafafa' }}>
+                  <CardHeader>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Hash className="h-3 w-3" style={{ color: '#9ca3af' }} />
+                        <span className="font-mono text-xs font-bold" style={{ color: '#6b7280' }}>
+                          {order.order_id}
                         </span>
-                        <span className="text-muted-foreground">₱{item.price_at_order}</span>
+                        {getStatusBadge(order.status)}
                       </div>
-                    ))}
-                    <div className="border-muted-foreground/30 text-primary mt-2 flex justify-between border-t border-dashed pt-2 font-bold">
-                      <span className="flex items-center gap-1">
-                        <ReceiptText className="h-4 w-4" /> Total Paid
-                      </span>
-                      <span>₱{calculateTotal(order.items).toFixed(2)}</span>
+                      <div className="flex items-center justify-between gap-4">
+                        <CardTitle className="truncate text-lg" style={{ color: '#374151' }}>
+                          {order.full_name}
+                        </CardTitle>
+                        <span className="shrink-0 text-xs font-medium tracking-wider uppercase" style={{ color: '#9ca3af' }}>
+                          {order.department}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  </CardHeader>
 
-                  <div className="text-muted-foreground space-y-1 border-t pt-2 text-[11px]">
-                    <p>Order Placed: {new Date(order.order_time).toLocaleString()}</p>
-                    {order.status === 'picked_up' && (
-                      <p className="flex items-center gap-1 font-medium text-green-600 italic">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Completed: {order.completed_at ? new Date(order.completed_at).toLocaleString() : 'N/A'}
-                      </p>
-                    )}
-                    {order.status === 'cancelled' && (
-                      <p className="flex items-center gap-1 font-medium text-red-600 italic">
-                        <XCircle className="h-3 w-3" />
-                        Cancelled: {order.cancelled_at ? new Date(order.cancelled_at).toLocaleString() : 'N/A'}
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  <CardContent className="flex-1 space-y-4">
+                    <div className="space-y-2 rounded-lg border border-dashed p-3" style={{ backgroundColor: '#f5fbf6', borderColor: '#e5e7eb' }}>
+                      {order.items.map((item, i) => (
+                        <div key={i} className="flex justify-between text-sm">
+                          <span>
+                            <span className="font-bold">{item.quantity}x</span> {item.item_name_snapshot}
+                          </span>
+                          <span style={{ color: '#9ca3af' }}>₱{item.price_at_order}</span>
+                        </div>
+                      ))}
+                      <div className="mt-2 flex justify-between border-t border-dashed pt-2 font-bold" style={{ borderColor: '#e5e7eb', color: '#374151' }}>
+                        <span className="flex items-center gap-1">
+                          <ReceiptText className="h-4 w-4" /> Total Paid
+                        </span>
+                        <span>₱{calculateTotal(order.items).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 border-t pt-2 text-[11px]" style={{ borderColor: '#e5e7eb', color: '#9ca3af' }}>
+                      <p>Order Placed: {new Date(order.order_time).toLocaleString()}</p>
+                      {order.status === 'picked_up' && (
+                        <p className="flex items-center gap-1 font-medium text-green-600 italic">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Completed: {order.completed_at ? new Date(order.completed_at).toLocaleString() : 'N/A'}
+                        </p>
+                      )}
+                      {order.status === 'cancelled' && (
+                        <p className="flex items-center gap-1 font-medium text-red-600 italic">
+                          <XCircle className="h-3 w-3" />
+                          Cancelled: {order.cancelled_at ? new Date(order.cancelled_at).toLocaleString() : 'N/A'}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
       </Tabs>
