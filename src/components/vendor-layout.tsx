@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Utensils, ScrollText, Settings, LogOut, Store, ShieldUser, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Utensils, ScrollText, Settings, LogOut, Store, ShieldUser, ChevronRight, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 
@@ -21,26 +21,34 @@ export default function VendorLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [stallName, setStallName] = useState('Loading...');
+  const [stallLocation, setStallLocation] = useState('Loading...');
+  const [vendorName, setVendorName] = useState('Loading...');
   const stallId = localStorage.getItem('stallId');
 
   const pageTitle = PAGE_TITLES[location.pathname] ?? 'UPSmart Canteen';
 
   useEffect(() => {
-    const fetchStallName = async () => {
+    const fetchStallData = async () => {
       try {
         const token = localStorage.getItem('vendorToken');
         const response = await fetch('http://localhost:3000/api/vendorStall', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         if (response.ok) {
           const data = await response.json();
+
           setStallName(data.stall_name);
+          setStallLocation(data.location);
+          setVendorName(data.full_name);
         }
-      } catch {
+      } catch (error) {
+        console.error('Fetch error:', error);
         setStallName('Error Loading');
       }
     };
-    fetchStallName();
+
+    fetchStallData();
   }, []);
 
   useEffect(() => {
@@ -167,7 +175,7 @@ export default function VendorLayout() {
 
           {/* Right: Badges — row on lg, stacked col on md */}
           <div className="flex flex-col items-end gap-2 lg:flex-row lg:items-center lg:gap-3">
-            {/* Stall badge */}
+            {/* Stall name badge */}
             <div className="flex items-center gap-2 rounded-xl border px-3 py-1.5" style={{ backgroundColor: '#faf6eb', borderColor: '#c9a84c' }}>
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border" style={{ backgroundColor: '#f0f7f1', borderColor: '#c9a84c' }}>
                 <Store className="h-3.5 w-3.5" style={{ color: '#1a5c2a' }} />
@@ -181,6 +189,22 @@ export default function VendorLayout() {
                 </p>
               </div>
             </div>
+            {/* Location badge */}
+            {stallLocation && (
+              <div className="flex items-center gap-2 rounded-xl border px-3 py-1.5" style={{ backgroundColor: '#faf6eb', borderColor: '#c9a84c' }}>
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border" style={{ backgroundColor: '#f0f7f1', borderColor: '#c9a84c' }}>
+                  <MapPin className="h-3.5 w-3.5" style={{ color: '#1a5c2a' }} />
+                </div>
+                <div className="leading-tight">
+                  <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>
+                    Location
+                  </p>
+                  <p className="text-xs font-bold" style={{ color: '#14491f' }}>
+                    {stallLocation}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Divider — row only */}
             <div className="hidden h-8 w-px lg:block" style={{ backgroundColor: '#e8d99a' }} />
@@ -194,7 +218,8 @@ export default function VendorLayout() {
                 <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>
                   Logged in as
                 </p>
-                <p className="text-xs font-bold text-blue-700">Vendor Account</p>
+                {/* Dynamic Vendor Name */}
+                <p className="text-xs font-bold text-blue-700">{vendorName}</p>
               </div>
             </div>
           </div>

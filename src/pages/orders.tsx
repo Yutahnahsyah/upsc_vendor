@@ -159,7 +159,7 @@ export default function Orders() {
           <div className="flex items-center gap-2">
             <div className="relative w-48 sm:w-64 lg:w-80">
               <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input placeholder="Search by name or ID..." className="h-9 bg-white pl-10 shadow-sm" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} />
+              <Input placeholder="Search by name, id, or department..." className="h-9 bg-white pl-10 shadow-sm" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} />
             </div>
             <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 bg-white shadow-sm" onClick={() => fetchOrders(true)} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} style={{ color: '#1a5c2a' }} />
