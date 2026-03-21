@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Utensils, ScrollText, Settings, LogOut, Store } from 'lucide-react';
+import { LayoutDashboard, Utensils, ScrollText, Settings, LogOut, Store, ShieldUser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 
 // Initialize outside to ensure it persists across re-renders
-const socket = io('http://localhost:3000', { 
+const socket = io('http://localhost:3000', {
   autoConnect: false,
   reconnection: true,
-  reconnectionAttempts: 5
+  reconnectionAttempts: 5,
 });
 
 export default function VendorLayout() {
@@ -18,7 +18,6 @@ export default function VendorLayout() {
   const [stallName, setStallName] = useState('Loading...');
   const stallId = localStorage.getItem('stallId');
 
-  // 1. Fetch Stall Name (Only once on mount)
   useEffect(() => {
     const fetchStallName = async () => {
       try {
@@ -53,11 +52,7 @@ export default function VendorLayout() {
 
       // Global Toast - visible on ANY page under this layout
       toast.success(`Incoming Order #${data.orderId}!`, {
-        description: (
-          <span className="mt-1 block font-semibold text-black">
-            {data.message}
-          </span>
-        ),
+        description: <span className="mt-1 block font-semibold text-black">{data.message}</span>,
         icon: '🔔',
         duration: 8000,
       });
@@ -68,12 +63,11 @@ export default function VendorLayout() {
 
     socket.on('new_order_alert', handleNewOrder);
 
-    // CRITICAL: We only remove the listener on unmount, 
     // we DON'T disconnect here to keep the line open during navigation
     return () => {
       socket.off('new_order_alert', handleNewOrder);
     };
-  }, [stallId]); 
+  }, [stallId]);
 
   const handleLogout = () => {
     socket.disconnect(); // ONLY disconnect on logout
@@ -90,8 +84,12 @@ export default function VendorLayout() {
         <div className="border-b p-6">
           <h2 className="text-primary text-xl font-bold">UPSmart Canteen</h2>
           <div className="mt-2 flex items-center gap-2 text-slate-600">
-            <Store size={16} className="text-orange-500" />
+            <Store size={20} className="text-orange-500" />
             <span className="truncate text-sm font-medium">{stallName}</span>
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-slate-600">
+            <ShieldUser size={20} className="text-blue-500"></ShieldUser>
+            <span className="truncate text-sm font-medium">Vendor Account</span>
           </div>
         </div>
         <nav className="flex-1 space-y-2 p-4">

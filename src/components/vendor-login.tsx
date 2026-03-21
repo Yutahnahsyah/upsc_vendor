@@ -1,16 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input'; // Import the new component
 import { toast } from 'sonner';
 import { User, RectangleEllipsis } from 'lucide-react';
 
 export default function VendorLogin() {
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ username: '', password: '' });
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (searchParams.get('session') === 'expired') {
+      toast.error("Your account has been archived. Access denied.", {
+        description: "Please contact the head administrator for assistance.",
+        duration: 5000,
+      });
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -35,7 +46,6 @@ export default function VendorLogin() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Authentication failed');
 
-      // Success: Store the goods
       localStorage.setItem('vendorToken', data.token);
       localStorage.setItem('stallId', data.stall_id.toString());
 
@@ -69,19 +79,34 @@ export default function VendorLogin() {
             <label className="text-sm font-medium">Username</label>
             <div className="relative">
               <User className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input name="username" className="pl-9" placeholder="Enter your username here..." value={formData.username} onChange={handleInputChange} required />
+              <Input 
+                name="username" 
+                className="pl-9" 
+                placeholder="Enter your username here..." 
+                value={formData.username} 
+                onChange={handleInputChange} 
+                required 
+              />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Password</label>
-            <div className="relative">
-              <RectangleEllipsis className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input name="password" type="password" className="pl-9" placeholder="••••••••" value={formData.password} onChange={handleInputChange} required />
-            </div>
+            <PasswordInput
+              name="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleInputChange}
+              required
+              leftIcon={<RectangleEllipsis className="h-4 w-4" />}
+            />
           </div>
 
-          <Button type="submit" className="w-full bg-[#111] transition-all hover:bg-black" disabled={isLoading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-[#111] transition-all hover:bg-black" 
+            disabled={isLoading}
+          >
             {isLoading ? 'Authenticating...' : 'Login to Dashboard'}
           </Button>
         </form>

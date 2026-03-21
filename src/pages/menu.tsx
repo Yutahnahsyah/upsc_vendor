@@ -2,10 +2,9 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Search, Trash2, Utensils, Banknote, RefreshCw, ImageIcon, X, Plus, Package, Minus, AlignLeft } from 'lucide-react';
+import { Search, Trash2, Utensils, Banknote, RefreshCw, ImageIcon, X, Plus, Package, Minus, AlignLeft, Upload } from 'lucide-react';
 
 interface MenuItem {
   item_id: number;
@@ -214,7 +213,6 @@ export default function Menu() {
       <header className="flex shrink-0 items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Menu Management</h1>
-          <p className="text-muted-foreground">Manage your stall offerings and availability.</p>
         </div>
       </header>
 
@@ -256,7 +254,7 @@ export default function Menu() {
                   <label className="text-sm font-medium">Dish Name</label>
                   <div className="relative">
                     <Utensils className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-                    <Input className="pl-10" placeholder="e.g. Pork Sisig" value={formData.item_name} onChange={(e) => setFormData({ ...formData, item_name: e.target.value })} required />
+                    <Input className="pl-10" placeholder="Enter dish name..." value={formData.item_name} onChange={(e) => setFormData({ ...formData, item_name: e.target.value })} required />
                   </div>
                 </div>
 
@@ -368,11 +366,11 @@ export default function Menu() {
                           <Utensils className="text-muted-foreground h-10 w-10" />
                         </div>
                       )}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
-                        <Badge variant="secondary" className="bg-white/90">
-                          Change Photo
-                        </Badge>
-                      </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Button variant="secondary" size="sm" className="gap-2">
+                      <Upload className="h-4 w-4" /> Change Image
+                    </Button>
+                  </div>
                     </div>
 
                     {/* 2. Header Section */}

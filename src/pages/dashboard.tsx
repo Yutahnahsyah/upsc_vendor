@@ -59,15 +59,25 @@ export default function VendorDashboard() {
     <>
       <header className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Stall Overview</h1>
-        <p className="text-muted-foreground">Manage your orders and track your performance.</p>
       </header>
 
       {/* Metric Cards */}
       <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Overall Sales" value={loading ? '...' : `₱${stats.totalSales.toLocaleString()}`} icon={<ShoppingBag className="text-green-600" />} />
-        <StatCard title="Pending" value={loading ? '...' : stats.pendingOrders.toString()} icon={<Clock className="text-orange-500" />} />
-        <StatCard title="Completed" value={loading ? '...' : stats.completedOrders.toString()} icon={<CheckCircle className="text-blue-500" />} />
-        <StatCard title="Menu Items" value={loading ? '...' : stats.activeItems.toString()} icon={<UtensilsCrossed className="text-gray-500" />} />
+        <StatCard
+          title="Total Sales Today"
+          value={
+            loading
+              ? '...'
+              : `₱${Number(stats.totalSales).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`
+          }
+          icon={<ShoppingBag className="text-blue-500" />}
+        />{' '}
+        <StatCard title="Pending Orders" value={loading ? '...' : stats.pendingOrders.toString()} icon={<Clock className="text-orange-500" />} />
+        <StatCard title="Completed Orders Today" value={loading ? '...' : stats.completedOrders.toString()} icon={<CheckCircle className="text-green-500" />} />
+        <StatCard title="Available Menu Items" value={loading ? '...' : stats.activeItems.toString()} icon={<UtensilsCrossed className="text-gray-500" />} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-7">

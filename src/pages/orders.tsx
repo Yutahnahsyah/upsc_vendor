@@ -85,12 +85,8 @@ export default function Orders() {
 
     window.addEventListener('refresh-orders', handleGlobalRefresh);
 
-    // Fallback polling (optional, kept for safety)
-    const interval = setInterval(() => fetchOrders(), 60000);
-
     return () => {
       window.removeEventListener('refresh-orders', handleGlobalRefresh);
-      clearInterval(interval);
     };
   }, [fetchOrders]);
 
@@ -133,11 +129,7 @@ export default function Orders() {
   };
 
   const filteredOrders = useMemo(
-    () => orders.filter((order) => 
-      [order.full_name, String(order.order_id), order.department].some((field) => 
-        field?.toLowerCase().includes(orderSearch.toLowerCase())
-      )
-    ),
+    () => orders.filter((order) => [order.full_name, String(order.order_id), order.department].some((field) => field?.toLowerCase().includes(orderSearch.toLowerCase()))),
     [orders, orderSearch]
   );
 
@@ -164,7 +156,6 @@ export default function Orders() {
       <header className="flex shrink-0 items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Order Management</h1>
-          <p className="text-muted-foreground">Monitor and update real-time orders.</p>
         </div>
       </header>
 
@@ -213,7 +204,7 @@ export default function Orders() {
                   </CardHeader>
 
                   <CardContent className="flex-1 space-y-4">
-                    <div className="bg-muted/40 space-y-2 rounded-lg p-3">
+                    <div className="bg-muted/40 space-y-2 rounded-lg border border-dashed p-3">
                       {order.items.map((item, i) => (
                         <div key={i} className="flex justify-between text-sm">
                           <span>
