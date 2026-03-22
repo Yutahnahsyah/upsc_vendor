@@ -22,6 +22,9 @@ export default function VendorLayout() {
   const location = useLocation();
   const [stallName, setStallName] = useState('Loading...');
   const [stallLocation, setStallLocation] = useState('Loading...');
+  const [isOpen, setIsOpen] = useState(false);
+  const [isTogglingOpen, setIsTogglingOpen] = useState(false);
+  const [isLoadingStall, setIsLoadingStall] = useState(true);
   const [vendorName, setVendorName] = useState('Loading...');
   const stallId = localStorage.getItem('stallId');
 
@@ -37,14 +40,16 @@ export default function VendorLayout() {
 
         if (response.ok) {
           const data = await response.json();
-
           setStallName(data.stall_name);
           setStallLocation(data.location);
+          setIsOpen(data.is_open);
           setVendorName(data.full_name);
         }
       } catch (error) {
         console.error('Fetch error:', error);
         setStallName('Error Loading');
+      } finally {
+        setIsLoadingStall(false);
       }
     };
 
@@ -80,6 +85,32 @@ export default function VendorLayout() {
     navigate('/');
   };
 
+  const handleToggleOpen = async () => {
+    setIsTogglingOpen(true);
+    try {
+      const token = localStorage.getItem('vendorToken');
+      const response = await fetch('http://localhost:3000/api/updateStallOpenStatus', {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ stall_id: stallId, is_open: !isOpen }),
+      });
+
+      if (response.ok) {
+        setIsOpen((prev) => !prev);
+        toast.success(`Stall is now ${!isOpen ? 'Open' : 'Closed'}`);
+      } else {
+        toast.error('Failed to update stall status');
+      }
+    } catch {
+      toast.error('Connection error');
+    } finally {
+      setIsTogglingOpen(false);
+    }
+  };
+
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
@@ -91,33 +122,24 @@ export default function VendorLayout() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* ── Sidebar ──
-          md (768–1023px): icon-only, w-16
-          lg (1024px+):    full labels, w-56
-      */}
       <aside
         className="fixed hidden h-full flex-col overflow-hidden transition-all duration-200 md:flex md:w-16 lg:w-56"
         style={{ background: 'linear-gradient(180deg, #1a5c2a 0%, #14491f 60%, #0f3a18 100%)' }}
       >
-        {/* Gold top accent */}
         <div className="h-1 w-full flex-shrink-0" style={{ background: 'linear-gradient(90deg, #c9a84c, #e8c96a, #c9a84c)' }} />
 
-        {/* Brand — hidden on icon-only */}
         <div className="hidden flex-shrink-0 border-b border-white/10 px-5 py-5 lg:block">
           <span className="text-xs font-semibold tracking-widest text-amber-300/80 uppercase">PHINMA Education</span>
           <h2 className="mt-0.5 text-lg leading-tight font-bold text-white">UPSmart Canteen</h2>
         </div>
 
-        {/* Icon-only brand mark for md */}
         <div className="flex flex-shrink-0 items-center justify-center border-b border-white/10 py-4 lg:hidden">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/20">
             <Store className="h-4 w-4 text-amber-300" />
           </div>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
-          {/* Section label — full only */}
           <p className="mb-2 hidden px-3 text-[10px] font-bold tracking-widest text-white/30 uppercase lg:block">Navigation</p>
 
           {navItems.map(({ path, label, icon: Icon }) => {
@@ -131,22 +153,18 @@ export default function VendorLayout() {
                   active ? 'border border-white/20 bg-white/15 text-white shadow-sm' : 'border border-transparent text-white/60 hover:bg-white/8 hover:text-white'
                 }`}
               >
-                {/* Icon + label row */}
                 <div className="flex items-center gap-3">
                   <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all ${active ? 'bg-amber-400/25' : 'bg-transparent group-hover:bg-white/10'}`}>
                     <Icon className={`h-4 w-4 ${active ? 'text-amber-300' : 'text-white/60 group-hover:text-white'}`} />
                   </div>
-                  {/* Label — full sidebar only */}
                   <span className="hidden lg:inline">{label}</span>
                 </div>
-                {/* Chevron — full sidebar only */}
                 {active && <ChevronRight className="hidden h-3.5 w-3.5 text-amber-300/70 lg:block" />}
               </button>
             );
           })}
         </nav>
 
-        {/* Logout */}
         <div className="flex-shrink-0 border-t border-white/10 p-2 lg:p-4">
           <button
             onClick={handleLogout}
@@ -161,11 +179,8 @@ export default function VendorLayout() {
         </div>
       </aside>
 
-      {/* ── Main Area ── offset matches sidebar width at each breakpoint */}
       <div className="flex min-h-screen flex-1 flex-col md:ml-16 lg:ml-56">
-        {/* ── Top Header Bar ── */}
         <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b px-6 py-3" style={{ backgroundColor: '#ffffff', borderColor: '#e8d99a' }}>
-          {/* Left: Page Title */}
           <div>
             <h1 className="text-xl font-bold tracking-tight lg:text-2xl" style={{ color: '#1a5c2a' }}>
               {pageTitle}
@@ -173,22 +188,48 @@ export default function VendorLayout() {
             <div className="mt-0.5 h-0.5 rounded-full" style={{ width: `${pageTitle.length * 10}px`, background: 'linear-gradient(90deg, #c9a84c, #e8c96a, transparent)' }} />
           </div>
 
-          {/* Right: Badges — row on lg, stacked col on md */}
           <div className="flex flex-col items-end gap-2 lg:flex-row lg:items-center lg:gap-3">
+
+            {/* is_open toggle badge — only renders after data is loaded */}
+            {!isLoadingStall && (
+              <button
+                onClick={handleToggleOpen}
+                disabled={isTogglingOpen}
+                className="flex items-center gap-2 rounded-xl border px-3 py-1.5 transition-all hover:opacity-80 disabled:opacity-50"
+                style={{
+                  backgroundColor: isOpen ? '#f0fdf4' : '#fef2f2',
+                  borderColor: isOpen ? '#86efac' : '#fca5a5',
+                }}
+              >
+                <div
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border"
+                  style={{
+                    backgroundColor: isOpen ? '#dcfce7' : '#fee2e2',
+                    borderColor: isOpen ? '#4ade80' : '#f87171',
+                  }}
+                >
+                  <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: isOpen ? '#16a34a' : '#dc2626' }} />
+                </div>
+                <div className="text-left leading-tight">
+                  <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>Stall Status</p>
+                  <p className="text-xs font-bold" style={{ color: isOpen ? '#15803d' : '#b91c1c' }}>
+                    {isTogglingOpen ? 'Updating...' : isOpen ? 'Open' : 'Closed'}
+                  </p>
+                </div>
+              </button>
+            )}
+
             {/* Stall name badge */}
             <div className="flex items-center gap-2 rounded-xl border px-3 py-1.5" style={{ backgroundColor: '#faf6eb', borderColor: '#c9a84c' }}>
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border" style={{ backgroundColor: '#f0f7f1', borderColor: '#c9a84c' }}>
                 <Store className="h-3.5 w-3.5" style={{ color: '#1a5c2a' }} />
               </div>
               <div className="leading-tight">
-                <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>
-                  Stall
-                </p>
-                <p className="text-xs font-bold" style={{ color: '#14491f' }}>
-                  {stallName}
-                </p>
+                <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>Stall</p>
+                <p className="text-xs font-bold" style={{ color: '#14491f' }}>{stallName}</p>
               </div>
             </div>
+
             {/* Location badge */}
             {stallLocation && (
               <div className="flex items-center gap-2 rounded-xl border px-3 py-1.5" style={{ backgroundColor: '#faf6eb', borderColor: '#c9a84c' }}>
@@ -196,17 +237,12 @@ export default function VendorLayout() {
                   <MapPin className="h-3.5 w-3.5" style={{ color: '#1a5c2a' }} />
                 </div>
                 <div className="leading-tight">
-                  <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>
-                    Location
-                  </p>
-                  <p className="text-xs font-bold" style={{ color: '#14491f' }}>
-                    {stallLocation}
-                  </p>
+                  <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>Location</p>
+                  <p className="text-xs font-bold" style={{ color: '#14491f' }}>{stallLocation}</p>
                 </div>
               </div>
             )}
 
-            {/* Divider — row only */}
             <div className="hidden h-8 w-px lg:block" style={{ backgroundColor: '#e8d99a' }} />
 
             {/* Vendor badge */}
@@ -215,17 +251,13 @@ export default function VendorLayout() {
                 <ShieldUser className="h-3.5 w-3.5 text-blue-500" />
               </div>
               <div className="leading-tight">
-                <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>
-                  Logged in as
-                </p>
-                {/* Dynamic Vendor Name */}
+                <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>Logged in as</p>
                 <p className="text-xs font-bold text-blue-700">{vendorName}</p>
               </div>
             </div>
           </div>
         </header>
 
-        {/* ── Page Content ── */}
         <main className="flex-1" style={{ backgroundColor: '#f0f7f1' }}>
           <Outlet />
         </main>

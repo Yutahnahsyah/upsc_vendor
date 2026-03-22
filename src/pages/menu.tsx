@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Search, Trash2, Utensils, Banknote, RefreshCw, ImageIcon, X, Plus, Package, Minus, AlignLeft, Upload } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface MenuItem {
   item_id: number;
@@ -181,13 +182,7 @@ export default function Menu() {
   };
 
   return (
-    /*
-      On md and below: single column, form on top, grid below — both scroll naturally
-      On lg+:          3-col grid, form left (col-span-1), grid right (col-span-2),
-                       each side scrolls independently inside a fixed viewport height
-    */
     <div className="p-4 md:p-6 lg:p-0">
-      {/* ── lg layout: side-by-side with independent scroll ── */}
       <div className="flex flex-col gap-6 lg:h-[calc(100vh-66px)] lg:flex-row lg:overflow-hidden lg:p-8">
         {/* Left: Add Item Form */}
         <div className="w-full shrink-0 lg:w-72 lg:overflow-y-auto lg:pr-1 xl:w-80">
@@ -299,16 +294,17 @@ export default function Menu() {
                   <label className="text-sm font-medium" style={{ color: '#14491f' }}>
                     Category
                   </label>
-                  <select
-                    className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  >
-                    <option value="Meals">Meals</option>
-                    <option value="Drinks">Drinks</option>
-                    <option value="Snacks">Snacks</option>
-                    <option value="Desserts">Desserts</option>
-                  </select>
+                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Meals">Meals</SelectItem>
+                      <SelectItem value="Drinks">Drinks</SelectItem>
+                      <SelectItem value="Snacks">Snacks</SelectItem>
+                      <SelectItem value="Desserts">Desserts</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <Button type="submit" className="w-full font-medium text-white transition-all hover:opacity-90" style={{ backgroundColor: '#1a5c2a' }}>
@@ -332,7 +328,7 @@ export default function Menu() {
             </Button>
           </div>
 
-          {/* Items grid — scrolls independently on lg */}
+          {/* Items grid */}
           <div className="overflow-y-auto pb-4 lg:flex-1">
             {loading ? (
               <div className="flex h-64 items-center justify-center">
@@ -370,17 +366,25 @@ export default function Menu() {
                     {/* Card Header */}
                     <CardHeader className="px-4 pt-3 pb-2">
                       <div className="mb-2 flex items-center justify-between">
-                        <select
-                          className="cursor-pointer rounded border px-2 py-0.5 text-[12px] font-medium outline-none"
-                          style={{ backgroundColor: '#f0f7f1', borderColor: '#b8d9be', color: '#14491f' }}
+                        {/* Category Select — shadcn, inside map so item is in scope */}
+                        <Select
                           value={item.category}
-                          onChange={(e) => handleUpdate(item.item_id, { category: e.target.value })}
+                          onValueChange={(value) => handleUpdate(item.item_id, { category: value })}
                         >
-                          <option value="Meals">Meals</option>
-                          <option value="Drinks">Drinks</option>
-                          <option value="Snacks">Snacks</option>
-                          <option value="Desserts">Desserts</option>
-                        </select>
+                          <SelectTrigger
+                            className="h-auto w-auto cursor-pointer rounded border px-2 py-0.5 text-[12px] font-medium"
+                            style={{ backgroundColor: '#f0f7f1', borderColor: '#b8d9be', color: '#14491f' }}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Meals">Meals</SelectItem>
+                            <SelectItem value="Drinks">Drinks</SelectItem>
+                            <SelectItem value="Snacks">Snacks</SelectItem>
+                            <SelectItem value="Desserts">Desserts</SelectItem>
+                          </SelectContent>
+                        </Select>
+
                         <div className="w-24 cursor-pointer text-right font-bold" style={{ color: '#1a5c2a' }} onClick={() => startEditing(item.item_id, 'price', item.price)}>
                           {editingField?.id === item.item_id && editingField.field === 'price' ? (
                             <div className="flex items-center justify-end">
