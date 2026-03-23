@@ -27,10 +27,16 @@ interface Order {
   items: OrderItem[];
 }
 
+const DEPARTMENTS = ['All', 'CAHS', 'CAS', 'CCJE', 'CEA', 'CELA', 'CHTM', 'CITE', 'CMA'];
+const HISTORY_STATUS_TABS = ['All', 'Picked Up', 'Cancelled'] as const;
+type HistoryStatusTab = (typeof HISTORY_STATUS_TABS)[number];
+
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [orderSearch, setOrderSearch] = useState('');
+  const [historyStatusTab, setHistoryStatusTab] = useState<HistoryStatusTab>('All');
+  const [historyDeptTab, setHistoryDeptTab] = useState('All');
 
   const stallId = localStorage.getItem('stallId');
 
@@ -110,12 +116,21 @@ export default function Orders() {
   const calculateTotal = (items: OrderItem[]) => items.reduce((sum, item) => sum + Number(item.price_at_order) * item.quantity, 0);
 
   const filteredOrders = useMemo(
-    () => orders.filter((order) => [order.full_name, String(order.order_id), order.department].some((field) => field?.toLowerCase().includes(orderSearch.toLowerCase()))),
+    () => orders.filter((order) => [order.full_name, String(order.order_id), new Date(order.order_time).toLocaleString()].some((field) => field?.toLowerCase().includes(orderSearch.toLowerCase()))),
     [orders, orderSearch]
   );
 
   const activeOrders = filteredOrders.filter((o) => ['pending', 'preparing', 'ready'].includes(o.status));
-  const completedOrders = filteredOrders.filter((o) => ['picked_up', 'cancelled'].includes(o.status));
+
+  const completedOrders = useMemo(() => {
+    return filteredOrders.filter((o) => {
+      const matchesStatus = historyStatusTab === 'All' ? ['picked_up', 'cancelled'].includes(o.status) : historyStatusTab === 'Picked Up' ? o.status === 'picked_up' : o.status === 'cancelled';
+      const matchesDept = historyDeptTab === 'All' || o.department === historyDeptTab;
+      return matchesStatus && matchesDept;
+    });
+  }, [filteredOrders, historyStatusTab, historyDeptTab]);
+
+  const totalHistoryCount = filteredOrders.filter((o) => ['picked_up', 'cancelled'].includes(o.status)).length;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
@@ -127,7 +142,7 @@ export default function Orders() {
     };
     return (
       <Badge variant="outline" className={`text-[10px] font-bold uppercase ${variants[status]}`}>
-        {status.toUpperCase()}
+        {status.replace('_', ' ').toUpperCase()}
       </Badge>
     );
   };
@@ -136,8 +151,8 @@ export default function Orders() {
     <div className="flex h-[calc(100vh-66px)] flex-col p-4 md:p-6 lg:p-8">
       <Tabs defaultValue="active" className="flex flex-1 flex-col overflow-hidden">
         {/* ── Tab Bar ── */}
-        <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-between gap-2 bg-transparent p-0">
-          {/* Tab toggles */}
+        <TabsList className="mb-4 flex h-auto w-full items-center justify-between gap-2 bg-transparent p-0">
+          {/* Left: Active/History toggles */}
           <div className="flex rounded-lg p-0.5" style={{ backgroundColor: '#e8f0e9' }}>
             <TabsTrigger
               value="active"
@@ -151,15 +166,37 @@ export default function Orders() {
               className="rounded-md px-3 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:shadow-sm"
               style={{ color: '#1a5c2a' }}
             >
-              History ({completedOrders.length})
+              History ({totalHistoryCount})
             </TabsTrigger>
           </div>
 
-          {/* Search + Refresh */}
+          {/* Center: History filters — only visible when History tab is active */}
+          <div className="flex items-center gap-2 [&:has(~[data-state=inactive])]:hidden">
+            <Tabs value={historyStatusTab} onValueChange={(v) => setHistoryStatusTab(v as HistoryStatusTab)} className="w-auto">
+              <TabsList className="border bg-[#f4f7f4]" style={{ borderColor: '#d4e8d4' }}>
+                {HISTORY_STATUS_TABS.map((s) => (
+                  <TabsTrigger key={s} value={s} className="text-xs data-[state=active]:text-[#1a5c2a] data-[state=active]:shadow-sm">
+                    {s}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            <Tabs value={historyDeptTab} onValueChange={setHistoryDeptTab} className="w-auto">
+              <TabsList className="border bg-[#f4f7f4]" style={{ borderColor: '#d4e8d4' }}>
+                {DEPARTMENTS.map((dept) => (
+                  <TabsTrigger key={dept} value={dept} className="text-xs data-[state=active]:text-[#1a5c2a] data-[state=active]:shadow-sm">
+                    {dept}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Right: Search + Refresh */}
           <div className="flex items-center gap-2">
             <div className="relative w-48 sm:w-64 lg:w-80">
               <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input placeholder="Search by name, id, or department..." className="h-9 bg-white pl-10 shadow-sm" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} />
+              <Input placeholder="Search by name, order ID, or date..." className="h-9 bg-white pl-10 shadow-sm" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} />{' '}
             </div>
             <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 bg-white shadow-sm" onClick={() => fetchOrders(true)} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} style={{ color: '#1a5c2a' }} />
@@ -170,7 +207,6 @@ export default function Orders() {
         {/* ── Active Orders ── */}
         <TabsContent value="active" className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* ── Loading state (matches Menu page) ── */}
             {loading ? (
               <div className="col-span-full flex h-64 items-center justify-center">
                 <div className="flex flex-col items-center gap-2">
@@ -262,82 +298,83 @@ export default function Orders() {
         </TabsContent>
 
         {/* ── History ── */}
-        <TabsContent value="history" className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* ── Loading state (matches Menu page) ── */}
-            {loading ? (
-              <div className="col-span-full flex h-64 items-center justify-center">
-                <div className="flex flex-col items-center gap-2">
-                  <RefreshCw className="h-8 w-8 animate-spin" style={{ color: '#1a5c2a' }} />
-                  <p className="animate-pulse text-sm" style={{ color: '#6b7280' }}>
-                    Loading history...
-                  </p>
+        <TabsContent value="history" className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">
+              {loading ? (
+                <div className="col-span-full flex h-64 items-center justify-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <RefreshCw className="h-8 w-8 animate-spin" style={{ color: '#1a5c2a' }} />
+                    <p className="animate-pulse text-sm" style={{ color: '#6b7280' }}>
+                      Loading history...
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : completedOrders.length === 0 ? (
-              <div className="col-span-full py-20 text-center text-sm" style={{ color: '#9ca3af' }}>
-                No order history yet.
-              </div>
-            ) : (
-              completedOrders.map((order) => (
-                <Card key={order.order_id} className="flex flex-col opacity-90" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#fafafa' }}>
-                  <CardHeader>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Hash className="h-3 w-3" style={{ color: '#9ca3af' }} />
-                        <span className="font-mono text-xs font-bold" style={{ color: '#6b7280' }}>
-                          {order.order_id}
-                        </span>
-                        {getStatusBadge(order.status)}
-                      </div>
-                      <div className="flex items-center justify-between gap-4">
-                        <CardTitle className="truncate text-lg" style={{ color: '#374151' }}>
-                          {order.full_name}
-                        </CardTitle>
-                        <span className="shrink-0 text-xs font-medium tracking-wider uppercase" style={{ color: '#9ca3af' }}>
-                          {order.department}
-                        </span>
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="flex-1 space-y-4">
-                    <div className="space-y-2 rounded-lg border border-dashed p-3" style={{ backgroundColor: '#f5fbf6', borderColor: '#e5e7eb' }}>
-                      {order.items.map((item, i) => (
-                        <div key={i} className="flex justify-between text-sm">
-                          <span>
-                            <span className="font-bold">{item.quantity}x</span> {item.item_name_snapshot}
+              ) : completedOrders.length === 0 ? (
+                <div className="col-span-full py-20 text-center text-sm" style={{ color: '#9ca3af' }}>
+                  No order history found for this selection.
+                </div>
+              ) : (
+                completedOrders.map((order) => (
+                  <Card key={order.order_id} className="flex flex-col opacity-90" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#fafafa' }}>
+                    <CardHeader>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Hash className="h-3 w-3" style={{ color: '#9ca3af' }} />
+                          <span className="font-mono text-xs font-bold" style={{ color: '#6b7280' }}>
+                            {order.order_id}
                           </span>
-                          <span style={{ color: '#9ca3af' }}>₱{item.price_at_order}</span>
+                          {getStatusBadge(order.status)}
                         </div>
-                      ))}
-                      <div className="mt-2 flex justify-between border-t border-dashed pt-2 font-bold" style={{ borderColor: '#e5e7eb', color: '#374151' }}>
-                        <span className="flex items-center gap-1">
-                          <ReceiptText className="h-4 w-4" /> Total Paid
-                        </span>
-                        <span>₱{calculateTotal(order.items).toFixed(2)}</span>
+                        <div className="flex items-center justify-between gap-4">
+                          <CardTitle className="truncate text-lg" style={{ color: '#374151' }}>
+                            {order.full_name}
+                          </CardTitle>
+                          <span className="shrink-0 text-xs font-medium tracking-wider uppercase" style={{ color: '#9ca3af' }}>
+                            {order.department}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    </CardHeader>
 
-                    <div className="space-y-1 border-t pt-2 text-[11px]" style={{ borderColor: '#e5e7eb', color: '#9ca3af' }}>
-                      <p>Order Placed: {new Date(order.order_time).toLocaleString()}</p>
-                      {order.status === 'picked_up' && (
-                        <p className="flex items-center gap-1 font-medium text-green-600 italic">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Completed: {order.completed_at ? new Date(order.completed_at).toLocaleString() : 'N/A'}
-                        </p>
-                      )}
-                      {order.status === 'cancelled' && (
-                        <p className="flex items-center gap-1 font-medium text-red-600 italic">
-                          <XCircle className="h-3 w-3" />
-                          Cancelled: {order.cancelled_at ? new Date(order.cancelled_at).toLocaleString() : 'N/A'}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                    <CardContent className="flex-1 space-y-4">
+                      <div className="space-y-2 rounded-lg border border-dashed p-3" style={{ backgroundColor: '#f5fbf6', borderColor: '#e5e7eb' }}>
+                        {order.items.map((item, i) => (
+                          <div key={i} className="flex justify-between text-sm">
+                            <span>
+                              <span className="font-bold">{item.quantity}x</span> {item.item_name_snapshot}
+                            </span>
+                            <span style={{ color: '#9ca3af' }}>₱{item.price_at_order}</span>
+                          </div>
+                        ))}
+                        <div className="mt-2 flex justify-between border-t border-dashed pt-2 font-bold" style={{ borderColor: '#e5e7eb', color: '#374151' }}>
+                          <span className="flex items-center gap-1">
+                            <ReceiptText className="h-4 w-4" /> Total Paid
+                          </span>
+                          <span>₱{calculateTotal(order.items).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 border-t pt-2 text-[11px]" style={{ borderColor: '#e5e7eb', color: '#9ca3af' }}>
+                        <p>Order Placed: {new Date(order.order_time).toLocaleString()}</p>
+                        {order.status === 'picked_up' && (
+                          <p className="flex items-center gap-1 font-medium text-green-600 italic">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Completed: {order.completed_at ? new Date(order.completed_at).toLocaleString() : 'N/A'}
+                          </p>
+                        )}
+                        {order.status === 'cancelled' && (
+                          <p className="flex items-center gap-1 font-medium text-red-600 italic">
+                            <XCircle className="h-3 w-3" />
+                            Cancelled: {order.cancelled_at ? new Date(order.cancelled_at).toLocaleString() : 'N/A'}
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
           </div>
         </TabsContent>
       </Tabs>

@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Search, Trash2, Utensils, Banknote, RefreshCw, ImageIcon, X, Plus, Package, Minus, AlignLeft, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface MenuItem {
   item_id: number;
@@ -19,10 +21,17 @@ interface MenuItem {
   item_image_url?: string;
 }
 
+const CATEGORIES = ['All', 'Meals', 'Drinks', 'Snacks', 'Desserts'] as const;
+const AVAILABILITY_TABS = ['All', 'Available', 'Unavailable'] as const;
+type CategoryTab = (typeof CATEGORIES)[number];
+type AvailabilityTab = (typeof AVAILABILITY_TABS)[number];
+
 export default function Menu() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [menuSearch, setMenuSearch] = useState('');
+  const [categoryTab, setCategoryTab] = useState<CategoryTab>('All');
+  const [availabilityTab, setAvailabilityTab] = useState<AvailabilityTab>('All');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingField, setEditingField] = useState<{ id: number; field: string } | null>(null);
   const [tempValue, setTempValue] = useState<string>('');
@@ -148,7 +157,6 @@ export default function Menu() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
     const promise = apiCall(`/deleteItem/${id}`, { method: 'DELETE' });
     toast.promise(promise, {
       loading: 'Deleting...',
@@ -161,8 +169,14 @@ export default function Menu() {
   };
 
   const filteredItems = useMemo(
-    () => items.filter((item) => [item.item_name, item.category, item.description].some((field) => field?.toLowerCase().includes(menuSearch.toLowerCase()))),
-    [items, menuSearch]
+    () =>
+      items.filter((item) => {
+        const matchesSearch = item.item_name.toLowerCase().includes(menuSearch.toLowerCase());
+        const matchesCategory = categoryTab === 'All' || item.category === categoryTab;
+        const matchesAvailability = availabilityTab === 'All' ? true : availabilityTab === 'Available' ? item.is_available : !item.is_available;
+        return matchesSearch && matchesCategory && matchesAvailability;
+      }),
+    [items, menuSearch, categoryTab, availabilityTab]
   );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -317,12 +331,37 @@ export default function Menu() {
 
         {/* Right: Menu Grid */}
         <div className="flex flex-1 flex-col gap-4 lg:overflow-hidden">
-          {/* Search & Refresh */}
+          {/* Search, Filters & Refresh */}
           <div className="flex shrink-0 items-center gap-2">
+            {/* Availability filter */}
+            <Tabs value={availabilityTab} onValueChange={(v) => setAvailabilityTab(v as AvailabilityTab)} className="w-auto">
+              <TabsList className="border bg-[#f4f7f4]" style={{ borderColor: '#d4e8d4' }}>
+                {AVAILABILITY_TABS.map((s) => (
+                  <TabsTrigger key={s} value={s} className="text-xs data-[state=active]:text-[#1a5c2a] data-[state=active]:shadow-sm">
+                    {s}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+
+            {/* Category filter */}
+            <Tabs value={categoryTab} onValueChange={(v) => setCategoryTab(v as CategoryTab)} className="w-auto">
+              <TabsList className="border bg-[#f4f7f4]" style={{ borderColor: '#d4e8d4' }}>
+                {CATEGORIES.map((c) => (
+                  <TabsTrigger key={c} value={c} className="text-xs data-[state=active]:text-[#1a5c2a] data-[state=active]:shadow-sm">
+                    {c}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+
+            {/* Search */}
             <div className="relative flex-1">
               <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
-              <Input placeholder="Search by name, category, or description..." className="h-9 bg-white pl-10 shadow-sm" value={menuSearch} onChange={(e) => setMenuSearch(e.target.value)} />
+              <Input placeholder="Search by name..." className="h-9 bg-white pl-10 shadow-sm" value={menuSearch} onChange={(e) => setMenuSearch(e.target.value)} />{' '}
             </div>
+
+            {/* Refresh */}
             <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 bg-white" onClick={() => fetchMenu(true)} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} style={{ color: '#1a5c2a' }} />
             </Button>
@@ -366,11 +405,7 @@ export default function Menu() {
                     {/* Card Header */}
                     <CardHeader className="px-4 pt-3 pb-2">
                       <div className="mb-2 flex items-center justify-between">
-                        {/* Category Select — shadcn, inside map so item is in scope */}
-                        <Select
-                          value={item.category}
-                          onValueChange={(value) => handleUpdate(item.item_id, { category: value })}
-                        >
+                        <Select value={item.category} onValueChange={(value) => handleUpdate(item.item_id, { category: value })}>
                           <SelectTrigger
                             className="h-auto w-auto cursor-pointer rounded border px-2 py-0.5 text-[12px] font-medium"
                             style={{ backgroundColor: '#f0f7f1', borderColor: '#b8d9be', color: '#14491f' }}
@@ -493,9 +528,32 @@ export default function Menu() {
                             Unavailable
                           </Button>
                         </div>
-                        <Button variant="ghost" className="text-destructive hover:bg-destructive/10 h-10 w-full" onClick={() => handleDelete(item.item_id)}>
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete Item
-                        </Button>
+
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" className="text-destructive hover:bg-destructive/10 h-10 w-full">
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete Item
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Delete Item</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to delete <span className="font-bold text-slate-900">{item.item_name}</span>? This action cannot be undone.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter className="gap-2">
+                              <DialogClose asChild>
+                                <Button variant="outline" size="sm">
+                                  Cancel
+                                </Button>
+                              </DialogClose>
+                              <Button variant="destructive" size="sm" onClick={() => handleDelete(item.item_id)}>
+                                Confirm Delete
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </CardContent>
                   </Card>
