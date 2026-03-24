@@ -55,7 +55,7 @@ export default function VendorDashboard() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
-      {/* ── Stat Cards: 1 col → 2 col → 4 col ── */}
+      {/* Stat Cards */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Sales Today"
@@ -74,9 +74,9 @@ export default function VendorDashboard() {
         <StatCard title="Available Menu Items" value={loading ? '...' : stats.activeItems.toString()} icon={<UtensilsCrossed className="h-5 w-5" style={{ color: '#c9a84c' }} />} />
       </div>
 
-      {/* ── Bottom Cards: stack on md, side-by-side on lg ── */}
+      {/* Bottom Cards*/}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-        {/* RECENT ACTIVITY */}
+        {/* Recent Activity */}
         <Card className="col-span-1 flex flex-col shadow-sm lg:col-span-4" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#ffffff' }}>
           <CardHeader>
             <CardTitle style={{ color: '#1a5c2a' }}>Recent Activity</CardTitle>
@@ -111,7 +111,7 @@ export default function VendorDashboard() {
           </CardContent>
         </Card>
 
-        {/* TOP SELLING ITEMS */}
+        {/* Top Selling Items */}
         <Card className="col-span-1 flex flex-col shadow-sm lg:col-span-3" style={{ border: '1.5px solid #c9a84c', backgroundColor: '#ffffff' }}>
           <CardHeader>
             <CardTitle style={{ color: '#1a5c2a' }}>Top Selling Items</CardTitle>

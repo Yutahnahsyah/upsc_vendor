@@ -12,10 +12,8 @@ import { Toaster } from '@/components/ui/sonner';
 function App() {
     useEffect(() => {
     const handleGlobalAuthError = (event: PromiseRejectionEvent) => {
-      // If the error message from your middleware is caught
       if (event.reason?.message?.includes('archived') || event.reason?.message?.includes('403')) {
         localStorage.clear();
-        // Redirect to login with a query parameter so we can show a message
         window.location.href = '/?session=expired';
       }
     };
@@ -26,12 +24,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Login Page */}
         <Route path="/" element={<VendorLogin />} />
 
-        {/* 1. Check if logged in */}
         <Route element={<ProtectedRoute />}>
-          {/* 2. Wrap these in the Sidebar Layout */}
           <Route element={<VendorLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/menu" element={<Menu />} />
@@ -40,7 +35,6 @@ function App() {
           </Route>
         </Route>
 
-        {/* Fallback for 404s */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <Toaster />

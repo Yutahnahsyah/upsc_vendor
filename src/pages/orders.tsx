@@ -150,7 +150,7 @@ export default function Orders() {
   return (
     <div className="flex h-[calc(100vh-66px)] flex-col p-4 md:p-6 lg:p-8">
       <Tabs defaultValue="active" className="flex flex-1 flex-col overflow-hidden">
-        {/* ── Tab Bar ── */}
+        {/* Tab Bar */}
         <TabsList className="mb-4 flex h-auto w-full items-center justify-between gap-2 bg-transparent p-0">
           {/* Left: Active/History toggles */}
           <div className="flex rounded-lg p-0.5" style={{ backgroundColor: '#e8f0e9' }}>
@@ -170,7 +170,7 @@ export default function Orders() {
             </TabsTrigger>
           </div>
 
-          {/* Center: History filters — only visible when History tab is active */}
+          {/* Center: History filters */}
           <div className="flex items-center gap-2 [&:has(~[data-state=inactive])]:hidden">
             <Tabs value={historyStatusTab} onValueChange={(v) => setHistoryStatusTab(v as HistoryStatusTab)} className="w-auto">
               <TabsList className="border bg-[#f4f7f4]" style={{ borderColor: '#d4e8d4' }}>
@@ -204,7 +204,7 @@ export default function Orders() {
           </div>
         </TabsList>
 
-        {/* ── Active Orders ── */}
+        {/* Active Orders */}
         <TabsContent value="active" className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">
             {loading ? (
@@ -297,7 +297,7 @@ export default function Orders() {
           </div>
         </TabsContent>
 
-        {/* ── History ── */}
+        {/* History */}
         <TabsContent value="history" className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto">
             <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 lg:grid-cols-3">

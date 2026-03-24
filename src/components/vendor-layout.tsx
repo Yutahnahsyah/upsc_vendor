@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // Added useCallback
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Utensils, ScrollText, Settings, LogOut, Store, ShieldUser, ChevronRight, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,8 +30,17 @@ export default function VendorLayout() {
 
   const pageTitle = PAGE_TITLES[location.pathname] ?? 'UPSmart Canteen';
 
+  const handleLogout = useCallback(() => {
+    socket.disconnect();
+    localStorage.removeItem('vendorToken');
+    localStorage.removeItem('stallId');
+    navigate('/');
+  }, [navigate]);
+
   useEffect(() => {
-    const fetchStallData = async () => {
+    if (!stallId) return;
+
+    const refreshData = async () => {
       try {
         const token = localStorage.getItem('vendorToken');
         const response = await fetch('http://localhost:3000/api/vendorStall', {
@@ -40,28 +49,51 @@ export default function VendorLayout() {
 
         if (response.ok) {
           const data = await response.json();
+
+          if (data.is_active === false) {
+            toast.error('Account deactivated. Please contact the administrator.');
+            handleLogout();
+            return;
+          }
+
           setStallName(data.stall_name);
           setStallLocation(data.location);
           setIsOpen(data.is_open);
           setVendorName(data.full_name);
         }
       } catch (error) {
-        console.error('Fetch error:', error);
+        console.error('Refresh error:', error);
         setStallName('Error Loading');
       } finally {
         setIsLoadingStall(false);
       }
     };
 
-    fetchStallData();
-  }, []);
+    refreshData();
 
-  useEffect(() => {
-    if (!stallId) return;
     if (!socket.connected) {
       socket.connect();
-      socket.emit('join_stall', stallId);
     }
+
+    const joinRoom = () => {
+      console.log('Joining room:', `stall_${stallId}`);
+      socket.emit('join_stall', stallId);
+    };
+
+    socket.on('connect', joinRoom);
+    if (socket.connected) joinRoom();
+
+    socket.on('stall_updated', () => {
+      console.log('📡 Stall/Vendor update received');
+      refreshData();
+    });
+
+    socket.on('vendor_kicked', () => {
+      console.log('📡 Kick signal received');
+      toast.error('Session expired or account deactivated.');
+      handleLogout();
+    });
+
     const handleNewOrder = (data: any) => {
       const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3');
       audio.play().catch(() => {});
@@ -72,18 +104,16 @@ export default function VendorLayout() {
       });
       window.dispatchEvent(new CustomEvent('refresh-orders'));
     };
+
     socket.on('new_order_alert', handleNewOrder);
+
     return () => {
+      socket.off('connect', joinRoom);
+      socket.off('stall_updated');
+      socket.off('vendor_kicked');
       socket.off('new_order_alert', handleNewOrder);
     };
-  }, [stallId]);
-
-  const handleLogout = () => {
-    socket.disconnect();
-    localStorage.removeItem('vendorToken');
-    localStorage.removeItem('stallId');
-    navigate('/');
-  };
+  }, [stallId, handleLogout]);
 
   const handleToggleOpen = async () => {
     setIsTogglingOpen(true);
@@ -189,8 +219,7 @@ export default function VendorLayout() {
           </div>
 
           <div className="flex flex-col items-end gap-2 lg:flex-row lg:items-center lg:gap-3">
-
-            {/* is_open toggle badge — only renders after data is loaded */}
+            {/* is_open toggle badge */}
             {!isLoadingStall && (
               <button
                 onClick={handleToggleOpen}
@@ -211,7 +240,9 @@ export default function VendorLayout() {
                   <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: isOpen ? '#16a34a' : '#dc2626' }} />
                 </div>
                 <div className="text-left leading-tight">
-                  <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>Stall Status</p>
+                  <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>
+                    Stall Status
+                  </p>
                   <p className="text-xs font-bold" style={{ color: isOpen ? '#15803d' : '#b91c1c' }}>
                     {isTogglingOpen ? 'Updating...' : isOpen ? 'Open' : 'Closed'}
                   </p>
@@ -225,8 +256,12 @@ export default function VendorLayout() {
                 <Store className="h-3.5 w-3.5" style={{ color: '#1a5c2a' }} />
               </div>
               <div className="leading-tight">
-                <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>Stall</p>
-                <p className="text-xs font-bold" style={{ color: '#14491f' }}>{stallName}</p>
+                <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>
+                  Stall
+                </p>
+                <p className="text-xs font-bold" style={{ color: '#14491f' }}>
+                  {stallName}
+                </p>
               </div>
             </div>
 
@@ -237,8 +272,12 @@ export default function VendorLayout() {
                   <MapPin className="h-3.5 w-3.5" style={{ color: '#1a5c2a' }} />
                 </div>
                 <div className="leading-tight">
-                  <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>Location</p>
-                  <p className="text-xs font-bold" style={{ color: '#14491f' }}>{stallLocation}</p>
+                  <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>
+                    Location
+                  </p>
+                  <p className="text-xs font-bold" style={{ color: '#14491f' }}>
+                    {stallLocation}
+                  </p>
                 </div>
               </div>
             )}
@@ -251,7 +290,9 @@ export default function VendorLayout() {
                 <ShieldUser className="h-3.5 w-3.5 text-blue-500" />
               </div>
               <div className="leading-tight">
-                <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>Logged in as</p>
+                <p className="text-[9px] font-medium" style={{ color: '#9ca3af' }}>
+                  Logged in as
+                </p>
                 <p className="text-xs font-bold text-blue-700">{vendorName}</p>
               </div>
             </div>

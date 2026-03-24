@@ -93,7 +93,7 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 p-4 md:p-6 lg:p-8">
-      {/* TOP: 4 Stat Cards */}
+      {/* Stat Cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Total Earnings"
@@ -105,7 +105,7 @@ export default function Settings() {
         <StatCard label="Cancelled" value={stats?.totalCancelled.toString() ?? '0'} icon={<XCircle className="h-5 w-5 text-red-500" />} />
       </div>
 
-      {/* BOTTOM: Cover Photo Banner */}
+      {/* Cover Photo Banner */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold" style={{ color: '#14491f' }}>

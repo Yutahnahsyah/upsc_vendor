@@ -7,7 +7,6 @@ const ProtectedRoute = () => {
   const [isValid, setIsValid] = useState(true);
   const location = useLocation();
 
-  // Check for the token immediately
   const token = localStorage.getItem('vendorToken');
 
   useEffect(() => {
@@ -19,8 +18,6 @@ const ProtectedRoute = () => {
       }
 
       try {
-        // We call a simple protected endpoint (like your dashboard stats or profile)
-        // Your new middleware will handle the is_active check
         const response = await fetch('http://localhost:3000/api/vendorStall', {
           method: 'GET',
           headers: {
@@ -31,7 +28,6 @@ const ProtectedRoute = () => {
 
         if (response.status === 403) {
           const data = await response.json();
-          // If the middleware blocked it due to archiving
           if (data.message.includes('archived')) {
             toast.error('', {
               description: <span className="mt-1 block font-semibold text-black">Your account has been archived by the administrator.</span>,
@@ -40,7 +36,6 @@ const ProtectedRoute = () => {
             setIsValid(false);
           }
         } else if (!response.ok) {
-          // Other errors (token expired, etc.)
           localStorage.clear();
           setIsValid(false);
         }
@@ -54,18 +49,14 @@ const ProtectedRoute = () => {
     checkAccountStatus();
   }, [token, location.pathname]);
 
-  // 1. Instant check: If no token at all, don't even wait for the fetch
   if (!token) {
     return <Navigate to="/" replace />;
   }
 
-  // 2. While fetching the status, we show nothing (or a small loading spinner)
-  // This prevents the "Flash of Archived Content"
   if (isVerifying) {
     return null;
   }
 
-  // 3. Final decision
   return isValid ? <Outlet /> : <Navigate to="/" replace />;
 };
 
